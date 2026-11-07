@@ -1,0 +1,7 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Camera frames are processed on device. -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <!-- The SDK contacts Presage to validate the API key and load models. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-feature android:name="android.hardware.camera.front" android:required="false" />
+</manifest>

@@ -1,0 +1,19 @@
+name: smartspectra_flutter_example
+description: Live vitals demo for the smartspectra_flutter plugin.
+publish_to: none
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.6.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  smartspectra_flutter:
+    path: ../
+
+dev_dependencies:
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true

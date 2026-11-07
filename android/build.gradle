@@ -1,0 +1,56 @@
+group = "dev.waqar.smartspectra_flutter"
+version = "0.1.0"
+
+buildscript {
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        classpath("com.android.tools.build:gradle:8.11.1")
+    }
+}
+
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
+apply plugin: "com.android.library"
+// Kotlin comes from Flutter's built-in Kotlin support (Flutter 3.44+), so the
+// plugin no longer applies the Kotlin Gradle plugin itself.
+
+android {
+    namespace = "dev.waqar.smartspectra_flutter"
+    compileSdk = 36
+
+    defaultConfig {
+        // SmartSpectra SDK requirement.
+        minSdk = 28
+    }
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+
+    sourceSets {
+        main.java.srcDirs += "src/main/kotlin"
+    }
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
+    }
+}
+
+dependencies {
+    implementation("com.presagetech:smartspectra:3.4.0")
+    implementation("androidx.camera:camera-view:1.6.0")
+    implementation("androidx.core:core-ktx:1.18.0")
+    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.10.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
+}
