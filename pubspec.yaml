@@ -3,7 +3,7 @@ description: >-
   Unofficial Flutter plugin for the Presage SmartSpectra SDK. Read pulse,
   breathing, HRV, blinking and facial expressions from the camera on Android
   and iOS.
-version: 0.1.0
+version: 0.2.0
 homepage: https://github.com/waqaralisiyal23/smartspectra_flutter
 repository: https://github.com/waqaralisiyal23/smartspectra_flutter
 issue_tracker: https://github.com/waqaralisiyal23/smartspectra_flutter/issues
@@ -19,6 +19,7 @@ environment:
   flutter: ">=3.44.0"
 
 dependencies:
+  ffi: ^2.2.0
   flutter:
     sdk: flutter
 

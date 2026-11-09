@@ -16,14 +16,25 @@ import 'smartspectra.dart';
 /// While no measurement is running, [placeholder] is shown on top, so the
 /// last camera frame never stays frozen on screen after `stop()`.
 ///
+/// When the preview is mounted in the same frame as `start()` (a screen that
+/// starts measuring as it opens), wait for [onReady] before calling
+/// `start()`: on Android the native view hands its surface to the SDK only
+/// once it exists, and a measurement started earlier runs without a visible
+/// preview.
+///
 /// On Android this hosts a CameraX `PreviewView`; on iOS it shows the SDK's
 /// image output (requires `SmartSpectraConfig.previewEnabled`).
 class SmartSpectraPreview extends StatefulWidget {
   /// Creates a preview.
-  const SmartSpectraPreview({super.key, this.placeholder});
+  const SmartSpectraPreview({super.key, this.placeholder, this.onReady});
 
   /// Shown while no measurement is running. Defaults to a black box.
   final Widget? placeholder;
+
+  /// Called once the native preview view exists and is attached to the SDK,
+  /// so `start()` will show the camera in it. Called again if the native view
+  /// is re-created. Same on Android and iOS.
+  final VoidCallback? onReady;
 
   @override
   State<SmartSpectraPreview> createState() => _SmartSpectraPreviewState();
@@ -47,6 +58,12 @@ class _SmartSpectraPreviewState extends State<SmartSpectraPreview> {
     });
   }
 
+  // The native view registers itself with the SDK while it is created, so
+  // by now `start()` will use it.
+  void _onCreated(int _) {
+    if (mounted) widget.onReady?.call();
+  }
+
   @override
   void dispose() {
     _subscription?.cancel();
@@ -58,14 +75,16 @@ class _SmartSpectraPreviewState extends State<SmartSpectraPreview> {
     final Widget camera;
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:
-        camera = const AndroidView(
+        camera = AndroidView(
           viewType: _viewType,
-          creationParamsCodec: StandardMessageCodec(),
+          creationParamsCodec: const StandardMessageCodec(),
+          onPlatformViewCreated: _onCreated,
         );
       case TargetPlatform.iOS:
-        camera = const UiKitView(
+        camera = UiKitView(
           viewType: _viewType,
-          creationParamsCodec: StandardMessageCodec(),
+          creationParamsCodec: const StandardMessageCodec(),
+          onPlatformViewCreated: _onCreated,
         );
       default:
         return const ColoredBox(

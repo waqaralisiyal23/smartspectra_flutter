@@ -63,6 +63,9 @@ class _LiveVitalsPageState extends State<LiveVitalsPage> {
     });
   }
 
+  /// Start waits for the native preview, so the camera always has a view.
+  bool _previewReady = false;
+
   Future<void> _toggle() async {
     setState(() => _error = null);
     try {
@@ -80,6 +83,8 @@ class _LiveVitalsPageState extends State<LiveVitalsPage> {
       }
       await _spectra.configure(const SmartSpectraConfig(
         apiKey: _apiKey,
+        // Reach Presage even on networks whose DNS cannot find it.
+        dnsFallback: true,
         metrics: {
           SmartSpectraMetric.breathing,
           SmartSpectraMetric.cardio,
@@ -117,7 +122,11 @@ class _LiveVitalsPageState extends State<LiveVitalsPage> {
       body: Stack(
         fit: StackFit.expand,
         children: [
-          const SmartSpectraPreview(),
+          SmartSpectraPreview(
+            onReady: () {
+              if (mounted && !_previewReady) setState(() => _previewReady = true);
+            },
+          ),
           if (_hint.isNotEmpty && _spectra.isActive)
             SafeArea(
               child: Align(
@@ -158,7 +167,7 @@ class _LiveVitalsPageState extends State<LiveVitalsPage> {
                       child: Text(_error!, style: const TextStyle(color: Colors.redAccent)),
                     ),
                   FilledButton(
-                    onPressed: busy ? null : _toggle,
+                    onPressed: busy || !_previewReady ? null : _toggle,
                     child: Text(_spectra.isActive ? 'Stop' : 'Start'),
                   ),
                   const SizedBox(height: 8),

@@ -42,6 +42,7 @@ class SmartSpectraConfig {
     this.camera = SmartSpectraCamera.front,
     this.enableTelemetry = false,
     this.previewEnabled = true,
+    this.dnsFallback = false,
   });
 
   /// Your API key from https://physiology.presagetech.com.
@@ -65,6 +66,17 @@ class SmartSpectraConfig {
   /// Whether a [SmartSpectraPreview] will be shown. On iOS this turns on the
   /// SDK's preview image output; turn it off for headless measurement.
   final bool previewEnabled;
+
+  /// Keeps Presage's service reachable when the network's DNS cannot find it
+  /// (some home routers and ISPs), on Android and iOS.
+  ///
+  /// The SDK connects through a small proxy inside your app, on the phone's
+  /// loopback interface, that only tunnels to `*.presagetech.com`. It looks
+  /// the server up with the phone's DNS first and, only when that fails,
+  /// asks Cloudflare (1.1.1.1) or Google (8.8.8.8) over HTTPS, which tells
+  /// them the hostname being looked up. TLS still runs end to end between
+  /// the SDK and Presage: the proxy never sees the content. Off by default.
+  final bool dnsFallback;
 
   /// Serializes the configuration for the platform channel.
   Map<String, Object?> toMap() => {

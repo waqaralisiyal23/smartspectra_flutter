@@ -7,7 +7,7 @@
 #
 Pod::Spec.new do |s|
   s.name             = 'smartspectra_flutter'
-  s.version          = '0.1.0'
+  s.version          = '0.2.0'
   s.summary          = 'Unofficial Flutter plugin for the Presage SmartSpectra SDK.'
   s.homepage         = 'https://pub.dev/packages/smartspectra_flutter'
   s.license          = { :type => 'MIT', :file => '../LICENSE' }

@@ -12,8 +12,8 @@ Turn the phone camera into a contactless sensor for:
 
 Works on **Android** and **iOS**. Frames are processed on the device.
 
-> **Status (0.1.0):** tested end to end on a physical Android phone. The iOS
-> side builds for device; on-device iOS testing is in progress.
+> **Status (0.2.0):** tested end to end on physical devices: Android
+> (Galaxy S22) and iOS (iPhone, iOS 27).
 
 > This is a community package. It is not made or endorsed by Presage Technologies.
 > SmartSpectra is a trademark of Presage Technologies, Inc. The SDK itself is
@@ -114,6 +114,13 @@ Show the camera with `SmartSpectraPreview`. Put it on screen **before** calling
 const SizedBox(height: 320, child: SmartSpectraPreview())
 ```
 
+If a screen mounts the preview and starts measuring at the same time, wait for
+`onReady`, which fires once the native preview is attached to the SDK:
+
+```dart
+SmartSpectraPreview(onReady: () => spectra.start())
+```
+
 While nothing is being measured, the preview shows a black box instead of the
 last camera frame. Pass your own with `SmartSpectraPreview(placeholder: ...)`.
 
@@ -145,12 +152,46 @@ as TV screens. Watch `validation` for live guidance.
 - While a measurement is running, the plugin keeps the screen awake.
 - Still call `stop()` when your measuring screen goes away.
 
+### Networks whose DNS cannot find Presage
+
+Some home routers and ISPs cannot resolve `*.presagetech.com`, and the
+measurement then fails with `networkError`. Turn on the fallback:
+
+```dart
+SmartSpectraConfig(apiKey: key, dnsFallback: true)
+```
+
+The SDK does its networking in native code, so a Dart-side DNS override cannot
+reach it. Instead its traffic goes through a small proxy inside your app, on
+the loopback interface, that only tunnels to `*.presagetech.com` on port 443.
+It resolves with the phone's DNS first and only when that fails asks
+Cloudflare (1.1.1.1) or Google (8.8.8.8) over HTTPS, which tells them the
+hostname being looked up. TLS still runs end to end between the SDK and
+Presage; the proxy never sees the content. Mention the DNS-over-HTTPS lookup
+in your privacy text if you turn it on.
+
 ### Troubleshooting
 
-- **`Could not resolve host: ...presagetech.com`** when starting: the device's
-  network DNS cannot look up Presage's servers (some home routers and ISPs).
-  Switch networks or set a public DNS on the device, for example Android
-  Private DNS `one.one.one.one`.
+- **`networkError` when starting** (for example
+  `Could not resolve host: ...presagetech.com`): the device cannot reach
+  Presage's servers. All such connectivity failures arrive as
+  `SmartSpectraErrorCode.networkError`, so one "check your connection" message
+  covers them. If other sites work, the network's DNS may not resolve
+  Presage's servers (some home routers and ISPs): turn on `dnsFallback`
+  (above), or set a public DNS on the device, for example Android Private DNS
+  `one.one.one.one`.
+- **iOS app closes after a while in a debug build** (`EXC_BAD_ACCESS`, often
+  right after "Lost connection to device"): recent iOS versions stop Flutter
+  debug builds once the debugger disconnects, which happens easily over
+  wireless debugging. It is not a plugin crash. Test on device with
+  `flutter run --profile`, preferably over USB.
+- **`objc: Class KalmanFilter (or VideoWriter) is implemented in both ...`** in
+  the iOS log at launch: a class-name clash between the SmartSpectra SDK and
+  Apple system frameworks, reported by iOS. Harmless in testing so far; it
+  comes from the SDK, not this plugin.
+- **"Select an input while SmartSpectra is stopped."** on iOS came from
+  configuring after a failed start. Since 0.2.0 `configure` resets the SDK and
+  retries; update if you see it.
 
 ## Privacy and telemetry
 
@@ -175,7 +216,12 @@ cd example
 ./setup.sh                               # generates android/ and ios/ (macOS)
 cp api_keys.example.json api_keys.json   # then paste your API key
 flutter run --dart-define-from-file=api_keys.json
+# On an iPhone, use a profile build (see Troubleshooting):
+flutter run --profile --dart-define-from-file=api_keys.json
 ```
+
+The example turns on `dnsFallback`, so it also works on networks whose DNS
+cannot find Presage.
 
 `api_keys.json` is git-ignored, so your key stays out of the repository.
 

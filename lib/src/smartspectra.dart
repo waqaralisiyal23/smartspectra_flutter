@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
 import 'config.dart';
+import 'dns_fallback/dns_fallback.dart';
 import 'errors.dart';
 import 'models.dart';
 import 'parse.dart';
@@ -33,6 +34,7 @@ class SmartSpectra {
   final _errors = StreamController<SmartSpectraException>.broadcast();
 
   StreamSubscription<Object?>? _subscription;
+  bool _dnsFallback = false;
   ProcessingStatus _currentStatus = ProcessingStatus.idle;
   ValidationStatus? _currentValidation;
 
@@ -72,10 +74,31 @@ class SmartSpectra {
 
   /// Applies [config]. Call while stopped; changes take effect on the next
   /// [start].
+  ///
+  /// If the SDK is still winding down from an earlier failed start, it is
+  /// reset and the configuration applied again.
   Future<void> configure(SmartSpectraConfig config) async {
     _ensureListening();
-    await _invoke<void>('configure', config.toMap());
+    _dnsFallback = config.dnsFallback;
+    if (config.dnsFallback) {
+      await DnsFallback.instance.enable();
+    } else {
+      await DnsFallback.instance.disable();
+    }
+    try {
+      await _invoke<void>('configure', config.toMap());
+    } on SmartSpectraException catch (e) {
+      if (!_notStopped(e)) rethrow;
+      await reset();
+      await _invoke<void>('configure', config.toMap());
+    }
   }
+
+  // iOS refuses to select a camera unless the SDK is fully stopped, which it
+  // is not after a failed start ("Select an input while SmartSpectra is
+  // stopped.").
+  static bool _notStopped(SmartSpectraException e) =>
+      e.code == SmartSpectraErrorCode.invalidState || e.message.toLowerCase().contains('is stopped');
 
   /// Whether camera permission is already granted.
   Future<bool> hasCameraPermission() async =>
@@ -93,6 +116,8 @@ class SmartSpectra {
   /// Throws [SmartSpectraException] on failure (for example, a bad API key).
   Future<void> start() async {
     _ensureListening();
+    // The OS may have closed the fallback proxy while the app was suspended.
+    if (_dnsFallback) await DnsFallback.instance.enable();
     await _invoke<void>('start');
   }
 
@@ -123,7 +148,7 @@ class SmartSpectra {
       case 'metrics':
         if (data is Map<Object?, Object?>) _metrics.add(SmartSpectraMetrics.fromMap(data));
       case 'status':
-        _currentStatus = parseEnum(ProcessingStatus.values, data as String?, ProcessingStatus.idle);
+        _currentStatus = parseStatus(data as String?);
         _status.add(_currentStatus);
       case 'validation':
         if (data is Map<Object?, Object?>) {
@@ -146,8 +171,8 @@ class SmartSpectra {
 
   SmartSpectraException _fromPlatform(PlatformException e) {
     final details = e.details;
-    return SmartSpectraException(
-      code: parseEnum(SmartSpectraErrorCode.values, e.code, SmartSpectraErrorCode.unknown),
+    return SmartSpectraException.fromNative(
+      code: e.code,
       message: e.message ?? e.code,
       retryable: details is Map && details['retryable'] == true,
     );
